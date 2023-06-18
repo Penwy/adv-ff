@@ -17,6 +17,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 import sys
+import os.path
+import platform
 import subprocess
 import ctypes as ct
 import ctypes.util
@@ -29,7 +31,11 @@ import obspython as obs
 try:
     import pyparsing as pp
 except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'pyparsing'])
+    if platform.system() == "Windows":
+        py_executable = os.path.join(sys.exec_prefix, "python")
+    else:
+        py_executable = sys.executable
+    subprocess.check_call([py_executable, '-m', 'pip', 'install', 'pyparsing'])
     import pyparsing as pp
 
 
@@ -124,7 +130,7 @@ ex_whitelist    = (ast.Constant, ast.JoinedStr, ast.FormattedValue,
 ###################################################################################################
 
 
-if sys.platform in {"linux", "linux2"}:
+if platform.system() == "Linux":
     libobs = ct.CDLL(ct.util.find_library("obs"))
     libfe = ct.CDLL(ct.util.find_library("obs-frontend-api"))
 else:
