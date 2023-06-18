@@ -86,7 +86,7 @@ The following can be customised or added to, in the "Script customisation" secti
 
 - `token_delimiter`: the character(s) used to delimit tokens. By nature, the character(s) used as delimiter can't be put directly in the filename, so if you want to put dollar signs in your filenames, change it to something else.
 
-- `source_fetch_proc`: when fetching data from sources, if the source's type id matches one listed in there, the procedures listed under it get called on it, and the specified values retrieved from the calldata and added to the data available to the parser.\
+- `source_fetch_proc`: when fetching data from sources, if the source's type id matches one listed in there, the procedures listed under it get called on it, and the specified values are retrieved from the calldata and added to the data available to the parser.\
     To add to it, syntax is as follows :
     ```
     <unversionned_id> : {<proc_1> : [(<type1>, <key1>), (<type2>, <key2>), ...],
@@ -94,7 +94,7 @@ The following can be customised or added to, in the "Script customisation" secti
                          ...
                          }
     ```
-    The "type" defines which function is used to retrieve the data from the calldata, as defined below it in `calldata_fetchers`
+    The "type" defines which function is used to retrieve the data from the calldata, as defined below it in `calldata_fetchers`.
 
 - `if_locals`, `if_whitelist`, `ex_locals` and `ex_whitelist` define the locals and nodes available to the if and exec tokens eval.
 
