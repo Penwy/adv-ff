@@ -150,38 +150,58 @@ def wrap(lib, funcname, restype, argtypes):
     return func
 
 
-# Necessary until PR#7929 gets merged
+#### Necessary wrapping for obs <= 29.1, uncomment if necessary
+###################################################################################################
+
 class ctConfig(ct.Structure):
     pass
 
-config_set_string               = wrap(libobs,
-                                       "config_set_string",
-                                       restype=None,
-                                       argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p, ct.c_char_p])
+_config_set_string                  = wrap(libobs,
+                                           "config_set_string",
+                                           restype=None,
+                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p, ct.c_char_p])
 
-_config_get_string              = wrap(libobs,
-                                       "config_get_string",
-                                       restype=ct.c_char_p,
-                                       argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
+_config_get_string                  = wrap(libobs,
+                                           "config_get_string",
+                                           restype=ct.c_char_p,
+                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
 
-def config_get_string(config, section, name):
-    res = _config_get_string(config, section, name)
-    if res:
-        return res.decode("utf-8")
-    return ""
-
-config_get_bool                 = wrap(libobs,
+_config_get_bool                    = wrap(libobs,
                                        "config_get_bool",
                                        restype=ct.c_bool,
                                        argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
 
-obs_frontend_get_profile_config = wrap(libfe,
-                                       "obs_frontend_get_profile_config",
-                                       restype=ct.POINTER(ctConfig),
-                                       argtypes=None)
+_obs_frontend_get_profile_config    = wrap(libfe,
+                                           "obs_frontend_get_profile_config",
+                                           restype=ct.POINTER(ctConfig),
+                                           argtypes=None)
 
 
-# Necessary to be able to bfree it to not leak memory
+def config_set_string(config, section, name, value):
+    _config_set_string(config, section.encode("utf-8"), name.encode("utf-8"), value.encode("utf-8"))
+
+def config_get_string(config, section, name):
+    res = _config_get_string(config, section.encode("utf-8"), name.encode("utf-8"))
+    if res:
+        return res.decode("utf-8")
+    return ""
+
+def config_get_bool(config, section, name):
+    return _config_get_bool(config, section.encode("utf-8"), name.encode("utf-8"))
+
+
+obs.config_set_string               = config_set_string
+obs.config_get_string               = config_get_string
+obs.config_get_bool                 = config_get_bool
+obs.obs_frontend_get_profile_config = _obs_frontend_get_profile_config
+
+###################################################################################################
+
+
+
+#### Necessary to be able to bfree it to not leak memory
+###################################################################################################
+
 _os_generate_formatted_filename = wrap(libobs,
                                        "os_generate_formatted_filename",
                                        restype=ct.c_void_p,
@@ -192,6 +212,7 @@ _bfree                          = wrap(libobs,
                                        restype=None,
                                        argtypes=[ct.c_void_p])
 
+
 def os_generate_formatted_filename(extension, space, file_format):
     formatted_p = _os_generate_formatted_filename(extension.encode("utf-8"), space, file_format.encode("utf-8"))
     value       = ct.c_char_p(formatted_p).value
@@ -200,6 +221,7 @@ def os_generate_formatted_filename(extension, space, file_format):
         return value.decode("utf-8")
     return ""
 
+###################################################################################################
 
 
 
@@ -495,23 +517,17 @@ def rec_parser_apply_cb(event):
     """
     match event:
         case obs.OBS_FRONTEND_EVENT_RECORDING_STARTING:
-            config = obs_frontend_get_profile_config()
-            rec_parser.oldformat = config_get_string(config,
-                                                     "Output".encode("utf-8"),
-                                                     "FilenameFormatting".encode("utf-8")
-                                                     )
+            config = obs.obs_frontend_get_profile_config()
+            rec_parser.oldformat = obs.config_get_string(config, "Output",
+                                                         "FilenameFormatting")
             if flags.record_enabled:
-                config_set_string(config,
-                                  "Output".encode("utf-8"),
-                                  "FilenameFormatting".encode("utf-8"),
-                                  rec_parser_interpret().encode("utf-8"))
+                obs.config_set_string(config, "Output",
+                                      "FilenameFormatting", rec_parser_interpret())
 
         case obs.OBS_FRONTEND_EVENT_RECORDING_STARTED:
-            config = obs_frontend_get_profile_config()
-            config_set_string(config,
-                              "Output".encode("utf-8"),
-                              "FilenameFormatting".encode("utf-8"),
-                              rec_parser.oldformat.encode("utf-8"))
+            config = obs.obs_frontend_get_profile_config()
+            obs.config_set_string(config, "Output",
+                                  "FilenameFormatting", rec_parser.oldformat)
 
 
 
@@ -575,29 +591,22 @@ def get_space():
     """ Whether filenames should be generated with or without spaces
         (used only in displaying the result of the formatting in the UI)
     """
-    config = obs_frontend_get_profile_config()
-    mode = config_get_string(config,
-                             "Output".encode("utf-8"),
-                             "Mode".encode("utf-8")
-                             )
+    config = obs.obs_frontend_get_profile_config()
+    mode = obs.config_get_string(config, "Output",
+                                 "Mode")
 
     if mode == "Simple":
-        space = config_get_bool(config,
-                                "SimpleOutput".encode("utf-8"),
-                                "FileNameWithoutSpace".encode("utf-8"))
+        space = obs.config_get_bool(config, "SimpleOutput",
+                                    "FileNameWithoutSpace")
     else:
-        rectype = config_get_string(config,
-                                    "AdvOut".encode("utf-8"),
-                                    "RecType".encode("utf-8")
-                                    )
+        rectype = obs.config_get_string(config, "AdvOut",
+                                        "RecType")
         if rectype == "Standard":
-            space = config_get_bool(config,
-                                    "AdvOut".encode("utf-8"),
-                                    "RecFileNameWithoutSpace".encode("utf-8"))
+            space = obs.config_get_bool(config, "AdvOut",
+                                        "RecFileNameWithoutSpace")
         else:
-            space = config_get_bool(config,
-                                    "AdvOut".encode("utf-8"),
-                                    "FFFileNameWithoutSpace".encode("utf-8"))
+            space = obs.config_get_bool(config, "AdvOut",
+                                        "FFFileNameWithoutSpace")
     return not space
     # Because consistency is overrated I guess
 
@@ -711,20 +720,15 @@ def process_props_flags(props, *args):
 
 
 def script_defaults(settings):
-    config = obs_frontend_get_profile_config()
-    rec_parser.oldformat = config_get_string(config,
-                                             "Output".encode("utf-8"),
-                                             "FilenameFormatting".encode("utf-8")
-                                             )
-    buf_parser.oldformat = (config_get_string(config,
-                                              "SimpleOutput".encode("utf-8"),
-                                              "RecRBPrefix".encode("utf-8")
-                                              ) +
+    config = obs.obs_frontend_get_profile_config()
+    rec_parser.oldformat = obs.config_get_string(config, "Output",
+                                                 "FilenameFormatting")
+
+    buf_parser.oldformat = (obs.config_get_string(config, "SimpleOutput",
+                                                  "RecRBPrefix") +
                             rec_parser.oldformat +
-                            config_get_string(config,
-                                              "SimpleOutput".encode("utf-8"),
-                                              "RecRBSuffix".encode("utf-8")
-                                              )
+                            obs.config_get_string(config, "SimpleOutput",
+                                                  "RecRBSuffix")
                             )
 
     obs.obs_data_set_default_string(settings, "rec_format", rec_parser.oldformat)
