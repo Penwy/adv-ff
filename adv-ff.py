@@ -28,6 +28,9 @@ import math, cmath, re, random, time
 import obspython as obs
 
 
+if sys.version_info[0] < 3 or sys.version_info[1] < 9:
+    print("Python version < 3.9, correct behaviour is not guaranteed")
+
 try:
     import pyparsing as pp
 except ModuleNotFoundError:
