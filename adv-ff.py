@@ -20,26 +20,54 @@ import sys
 import os.path
 import platform
 import subprocess
+import importlib.metadata as meta
+
 import ctypes as ct
 import ctypes.util
 import ast
 import json
 import math, cmath, re, random, time
+
 import obspython as obs
 
 
 if sys.version_info[0] < 3 or sys.version_info[1] < 9:
     print("Python version < 3.9, correct behaviour is not guaranteed")
 
+
+if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
+    print("Running under Flatpak, pyparsing import might have issues, report on Github if so.")
+    sys.path.append(f'./.local/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages/')
+
 try:
-    import pyparsing as pp
-except ModuleNotFoundError:
-    if platform.system() == "Windows":
-        py_executable = os.path.join(sys.exec_prefix, "python")
+    pyp_version = meta.version("pyparsing")
+    if int(pyp_version[0]) >= 3:
+        import pyparsing as pp
+        print(f"Found pyparsing {pyp_version}")
+        pyp_satisfied = True
     else:
-        py_executable = sys.executable
-    subprocess.check_call([py_executable, '-m', 'pip', 'install', 'pyparsing'])
+        print(f"Pyparsing outdated : found {pyp_version}, requires 3.0")
+        pyp_satisfied = False
+except (meta.PackageNotFoundError, ModuleNotFoundError):
+    print("Pyparsing not found")
+    pyp_satisfied = False
+
+
+if not pyp_satisfied:
+    print("Pyparsing requirements not satisfied, attempting pip install")
+    options = []
+    if platform.system() == "Windows":
+        py_executable = [os.path.join(sys.exec_prefix, "python")]
+    elif platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
+        py_executable = ['flatpak-spawn', '--host', sys.executable]
+        options = ['--user', '--force-reinstall']
+    else:
+        py_executable = [sys.executable]
+
+    subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
     import pyparsing as pp
+
+
 
 
 
