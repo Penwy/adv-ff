@@ -35,9 +35,10 @@ if sys.version_info[0] < 3 or sys.version_info[1] < 9:
     print("Python version < 3.9, correct behaviour is not guaranteed")
 
 
+
 if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
     print("Running under Flatpak, pyparsing import might have issues, report on Github if so.")
-    sys.path.append(f'./.local/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages/')
+    sys.path.append(os.path.expanduser(f'~/.local/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages/'))
 
 try:
     pyp_version = meta.version("pyparsing")
