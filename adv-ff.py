@@ -179,8 +179,8 @@ def wrap(lib, funcname, restype, argtypes):
     return func
 
 
-#### Necessary wrapping for obs <= 29.1, uncomment if necessary
-###################################################################################################
+#### Necessary wrapping for obs < 30.0, uncomment if necessary
+'''################################################################################################
 
 class ctConfig(ct.Structure):
     pass
@@ -196,9 +196,9 @@ _config_get_string                  = wrap(libobs,
                                            argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
 
 _config_get_bool                    = wrap(libobs,
-                                       "config_get_bool",
-                                       restype=ct.c_bool,
-                                       argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
+                                           "config_get_bool",
+                                           restype=ct.c_bool,
+                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
 
 _obs_frontend_get_profile_config    = wrap(libfe,
                                            "obs_frontend_get_profile_config",
@@ -224,7 +224,7 @@ obs.config_get_string               = config_get_string
 obs.config_get_bool                 = config_get_bool
 obs.obs_frontend_get_profile_config = _obs_frontend_get_profile_config
 
-###################################################################################################
+'''################################################################################################
 
 
 
@@ -548,7 +548,7 @@ def rec_parser_apply_cb(event):
         case obs.OBS_FRONTEND_EVENT_RECORDING_STARTING:
             config = obs.obs_frontend_get_profile_config()
             rec_parser.oldformat = obs.config_get_string(config, "Output",
-                                                         "FilenameFormatting")
+                                                         "FilenameFormatting") or ""
             if flags.record_enabled:
                 obs.config_set_string(config, "Output",
                                       "FilenameFormatting", rec_parser_interpret())
@@ -622,14 +622,14 @@ def get_space():
     """
     config = obs.obs_frontend_get_profile_config()
     mode = obs.config_get_string(config, "Output",
-                                 "Mode")
+                                 "Mode")  or ""
 
     if mode == "Simple":
         space = obs.config_get_bool(config, "SimpleOutput",
                                     "FileNameWithoutSpace")
     else:
         rectype = obs.config_get_string(config, "AdvOut",
-                                        "RecType")
+                                        "RecType") or ""
         if rectype == "Standard":
             space = obs.config_get_bool(config, "AdvOut",
                                         "RecFileNameWithoutSpace")
@@ -751,13 +751,13 @@ def process_props_flags(props, *args):
 def script_defaults(settings):
     config = obs.obs_frontend_get_profile_config()
     rec_parser.oldformat = obs.config_get_string(config, "Output",
-                                                 "FilenameFormatting")
+                                                 "FilenameFormatting") or ""
 
-    buf_parser.oldformat = (obs.config_get_string(config, "SimpleOutput",
-                                                  "RecRBPrefix") +
+    buf_parser.oldformat = ((obs.config_get_string(config, "SimpleOutput",
+                                                   "RecRBPrefix") or "") +
                             rec_parser.oldformat +
-                            obs.config_get_string(config, "SimpleOutput",
-                                                  "RecRBSuffix")
+                            (obs.config_get_string(config, "SimpleOutput",
+                                                   "RecRBSuffix") or "")
                             )
 
     obs.obs_data_set_default_string(settings, "rec_format", rec_parser.oldformat)
