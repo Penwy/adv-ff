@@ -408,6 +408,7 @@ def parser_fetch_data(sources):
 
     current_scene   = obs.obs_frontend_get_current_scene()
     current_preview = obs.obs_frontend_get_current_preview_scene()
+    data["user"]    = os.path.expanduser('~')
     data["scene"]   = obs.obs_source_get_name(current_scene)
     if current_preview:
         data["program"] = obs.obs_source_get_name(current_scene)
