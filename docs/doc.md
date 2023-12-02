@@ -15,6 +15,7 @@ Once enabled, it'll spawn the following UI :
 Basic formatting tokens are as follow:
 
 `v$user$` : Path to the Home directory of the current user (without trailing slash)\
+`v$username$` : Username of the current user\
 `v$scene$` : Currently selected scene ("Preview" scene when in studio mode)\
 `v$preview$` : Current preview scene (empty string if not in studio mode)\
 `v$program$` : Current program scene (empty string if not in studio mode)\
