@@ -48,7 +48,8 @@ Additionally, the following keys are added for use alongside the source settings
     - `hooked`: whether the source is currently hooked to a window
     - `name`: name of the window currently hooked (empty string if the source is not hooked)
     - `class`: class of the window currently hooked (empty string if the source is not hooked)
-
+- For Text sources (both Freetype2 and GDI+):
+    `file_text`: if the source is reading from file, the contents of the file in question, otherwise an empty string
 
 [^1]: Builtin, not win-capture-audio plugin.
 
@@ -98,6 +99,8 @@ The following can be customised or added to, in the "Script customisation" secti
     The "type" defines which function is used to retrieve the data from the calldata, as defined below it in `calldata_fetchers`.
 
 - `if_locals`, `if_whitelist`, `ex_locals` and `ex_whitelist` define the locals and nodes available to the if and exec tokens eval.
+
+- `source_post_process` is applied to each source (after the fetch procs). It allows to add tokens that can't be gotten by a proc.
 
 ### Additional notes
 

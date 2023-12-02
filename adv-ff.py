@@ -155,6 +155,41 @@ ex_whitelist    = (ast.Constant, ast.JoinedStr, ast.FormattedValue,
                    ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp, ast.comprehension
                    )
 
+def source_post_process(source, settings):
+    """ Called on every source, allows to add to or modify its tokens (the "settings" dict).
+    """
+    if obs.obs_source_get_unversioned_id(source) == "text_ft2_source":
+        if settings["from_file"]:
+            try:
+                with open(settings["text_file"], 'rt', encoding="utf8") as file:
+                    settings["file_text"] = " ".join([line[:-1] for line in file.readlines()])
+
+            except FileNotFoundError:
+                print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['text_file']} not found.")
+                settings["file_text"] = ""
+
+            except KeyError:
+                print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
+                settings["file_text"] = ""
+        else:
+            settings["file_text"] = ""
+
+    if obs.obs_source_get_unversioned_id(source) == "text_gdiplus":
+        if settings["read_from_file"]:
+            try:
+                with open(settings["file"], 'rt', encoding="utf8") as file:
+                    settings["file_text"] = " ".join([line[:-1] for line in file.readlines()])
+
+            except FileNotFoundError:
+                print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['file']} not found.")
+                settings["file_text"] = ""
+
+            except KeyError:
+                print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
+                settings["file_text"] = ""
+        else:
+            settings["file_text"] = ""
+
 
 
 ###################################################################################################
@@ -400,6 +435,8 @@ def parser_fetch_data(sources):
                     for func, key in items:
                         settings[key] = calldata_fetchers[func](cd, key)
                     obs.calldata_destroy(cd)
+
+            source_post_process(source, settings)
 
             data[ind]           = settings
             data[source_name]   = settings
