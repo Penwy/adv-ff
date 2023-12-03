@@ -108,3 +108,5 @@ The following can be customised or added to, in the "Script customisation" secti
 - All tokens are fully nestable, in any order. Have fun.
 
 - The replay buffer and "hooked" source info functionality rely on signals and procedures that are not (yet) part of current OBS (29.1.2). You can find a custom build that will enable them [here](https://github.com/Penwy/obs-studio/actions/runs/5301025505).
+
+- OBS's filename have a limit of 255 characters. In order to leave room for the extension (without which the muxer doesn't work), adv-ff limit its filename to 250 characters.

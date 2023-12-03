@@ -542,7 +542,7 @@ def interpreter(tree, data, err_counter=ErrCounter()):
                     val = ""
                 return_string += str(val)
 
-    return return_string
+    return return_string[0:249]
 
 
 
