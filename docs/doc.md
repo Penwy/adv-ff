@@ -50,7 +50,7 @@ Additionally, the following keys are added for use alongside the source settings
     - `name`: name of the window currently hooked (empty string if the source is not hooked)
     - `class`: class of the window currently hooked (empty string if the source is not hooked)
 - For Text sources (both Freetype2 and GDI+):
-    `file_text`: if the source is reading from file, the contents of the file in question, otherwise an empty string
+    - `file_text`: if the source is reading from file, the contents of the file in question, otherwise an empty string
 
 [^1]: Builtin, not win-capture-audio plugin.
 
@@ -109,4 +109,4 @@ The following can be customised or added to, in the "Script customisation" secti
 
 - The replay buffer and "hooked" source info functionality rely on signals and procedures that are not (yet) part of current OBS (29.1.2). You can find a custom build that will enable them [here](https://github.com/Penwy/obs-studio/actions/runs/5301025505).
 
-- OBS's filename have a limit of 255 characters. In order to leave room for the extension (without which the muxer doesn't work), adv-ff limit its filename to 250 characters.
+- OBS's filenames have a limit of 255 characters. In order to leave room for the extension (without which the muxer doesn't work), adv-ff limit its filename to 250 characters.
