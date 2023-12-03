@@ -162,7 +162,7 @@ def source_post_process(source, settings):
         if settings["from_file"]:
             try:
                 with open(settings["text_file"], 'rt', encoding="utf8") as file:
-                    settings["file_text"] = " ".join([line[:-1] for line in file.readlines()])
+                    settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
 
             except FileNotFoundError:
                 print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['text_file']} not found.")
@@ -178,7 +178,7 @@ def source_post_process(source, settings):
         if settings["read_from_file"]:
             try:
                 with open(settings["file"], 'rt', encoding="utf8") as file:
-                    settings["file_text"] = " ".join([line[:-1] for line in file.readlines()])
+                    settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
 
             except FileNotFoundError:
                 print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['file']} not found.")
