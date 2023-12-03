@@ -60,10 +60,10 @@ if not pyp_satisfied:
     if platform.system() == "Windows":
         py_executable = [os.path.join(sys.exec_prefix, "python")]
     elif platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
-        py_executable = ['flatpak-spawn', '--host', sys.executable]
+        py_executable = ['flatpak-spawn', '--host', f"python{sys.version_info[0]}.{sys.version_info[1]}"]
         options = ['--user', '--force-reinstall']
     else:
-        py_executable = [sys.executable]
+        py_executable = [f"python{sys.version_info[0]}.{sys.version_info[1]}"]    # No, sys.executable is not trustworthy in the slightest
 
     subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
     import pyparsing as pp
