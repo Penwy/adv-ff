@@ -14,15 +14,22 @@ Once enabled, it'll spawn the following UI :
 
 Basic formatting tokens are as follow:
 
+`v$day$` : Abbreviated weekday name[^1]\
+`v$Day$` : Full weekday name[^1]\
+`v$month$` : Abbreviated month name[^1]\
+`v$Month$` : Full month name[^1]
+
 `v$user$` : Path to the Home directory of the current user (without trailing slash)\
-`v$username$` : Username of the current user\
+`v$username$` : Username of the current user
+
 `v$scene$` : Currently selected scene ("Preview" scene when in studio mode)\
 `v$preview$` : Current preview scene (empty string if not in studio mode)\
-`v$program$` : Current program scene (empty string if not in studio mode)\
+`v$program$` : Current program scene (empty string if not in studio mode)
+
 `v$executable$` : Executable currently hooked by the first source in the list (empty string if the source is not a game/window/application audio capture, or not hooked)\
 `v$title$` : Title of the window currently hooked by the first source in the list (empty string if the source is not a game/window/application audio capture, or not hooked)\
 
-
+[^1]: Currently, those are using python's default locale.
 
 ## Advanced Usage
 
@@ -40,7 +47,7 @@ Additionally, the following keys are added for use alongside the source settings
 - `muted`: whether the source is muted in the mixer
 - `active`: whether the source is active (shown on an active output's mix)
 - `showing`: whether the source is showing (shown on an active output's mix, or a preview)
-- For game capture, window capture and application audio capture[^1] sources:
+- For game capture, window capture and application audio capture[^2] sources:
     - `hooked`: whether the source is currently hooked to a window
     - `title`: title of the window currently hooked (empty string if the source is not hooked)
     - `class`: class of the window currently hooked (empty string if the source is not hooked)
@@ -52,7 +59,7 @@ Additionally, the following keys are added for use alongside the source settings
 - For Text sources (both Freetype2 and GDI+):
     - `file_text`: if the source is reading from file, the contents of the file in question, otherwise an empty string
 
-[^1]: Builtin, not win-capture-audio plugin.
+[^2]: Builtin, not win-capture-audio plugin.
 
 ### Multiple sources
 

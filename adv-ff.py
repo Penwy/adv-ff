@@ -469,6 +469,11 @@ def parser_fetch_data(sources):
     obs.obs_source_release(current_scene)
     obs.obs_source_release(current_preview)
 
+    data["day"] = time.strftime("%a")
+    data["Day"] = time.strftime("%A")
+    data["month"] = time.strftime("%b")
+    data["Month"] = time.strftime("%B")
+
     try:
         data["executable"] = data[0]["executable"]
     except KeyError:
