@@ -158,36 +158,48 @@ ex_whitelist    = (ast.Constant, ast.JoinedStr, ast.FormattedValue,
 def source_post_process(source, settings):
     """ Called on every source, allows to add to or modify its tokens (the "settings" dict).
     """
+
+    # Adds the text of the selected file for a freetype2 source
     if obs.obs_source_get_unversioned_id(source) == "text_ft2_source":
-        if settings["from_file"]:
-            try:
-                with open(settings["text_file"], 'rt', encoding="utf8") as file:
-                    settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
+        try:
+            if settings["from_file"]:
+                try:
+                    with open(settings["text_file"], 'rt', encoding="utf8") as file:
+                        settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
 
-            except FileNotFoundError:
-                print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['text_file']} not found.")
+                except FileNotFoundError:
+                    print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['text_file']} not found.")
+                    settings["file_text"] = ""
+
+                except KeyError:
+                    print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
+                    settings["file_text"] = ""
+            else:
                 settings["file_text"] = ""
 
-            except KeyError:
-                print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
-                settings["file_text"] = ""
-        else:
+        except KeyError:
             settings["file_text"] = ""
 
+
+    # Adds the text of the selected file for a GDI+ source
     if obs.obs_source_get_unversioned_id(source) == "text_gdiplus":
-        if settings["read_from_file"]:
-            try:
-                with open(settings["file"], 'rt', encoding="utf8") as file:
-                    settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
+        try:
+            if settings["read_from_file"]:
+                try:
+                    with open(settings["file"], 'rt', encoding="utf8") as file:
+                        settings["file_text"] = " ".join([line.strip() for line in file.readlines()])
 
-            except FileNotFoundError:
-                print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['file']} not found.")
+                except FileNotFoundError:
+                    print(f"Source \"{obs.obs_source_get_name(source)}\": File {settings['file']} not found.")
+                    settings["file_text"] = ""
+
+                except KeyError:
+                    print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
+                    settings["file_text"] = ""
+            else:
                 settings["file_text"] = ""
 
-            except KeyError:
-                print(f"Source \"{obs.obs_source_get_name(source)}\": No file specified")
-                settings["file_text"] = ""
-        else:
+        except KeyError:
             settings["file_text"] = ""
 
 
