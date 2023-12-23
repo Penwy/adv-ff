@@ -79,7 +79,7 @@ The counters list at the top of the script's properties allows to manually adjus
 A newly created counter will not appear in the list until it's been refreshed with the relevant button.\
 Due to the limitations of scripting, the counter value displayed in the UI cannot get updated each time the counter is used, so don't forget to refresh the list before manually changing its value or you'll overwrite the increase.
 
-*N.B.:
+*N.B.:\
 - A counter inside the `$then$` block of an `$if$` statement will not get incremented if the statement's condition evaluates to false (and inversely for the `$else$` block).\
 - If you want a looping counter, use the exec token with a modulo operator. For example, `$exec$ c$counter$ %10 $end$` will loop the default counter between 0 and 9.*
 
