@@ -69,6 +69,20 @@ For example, `v$2[height]$` inserts the height of the *third* source in the list
 When no source is specified, it defaults to the first one in the list.\
 `v$executable$` and `v$title$` are just proxies for `v$0[executable]$` and `v$0[title]$`.
 
+### Counters
+
+Counter tokens are numbers that get incremented by 1 every time they are used when saving a file.\
+The default counter can be inserted with `c$counter$`.
+Additional counters can be created by inserting a token following the template `c$<counter_name>$`.
+
+The counters list at the top of the script's properties allows to manually adjust the value of select counters, or delete unused ones.
+A newly created counter will not appear in the list until it's been refreshed with the relevant button.\
+Due to the limitations of scripting, the counter value displayed in the UI cannot get updated each time the counter is used, so don't forget to refresh the list before manually changing its value or you'll overwrite the increase.
+
+*N.B.:
+- A counter inside the `$then$` block of an `$if$` statement will not get incremented if the statement's condition evaluates to false (and inversely for the `$else$` block).\
+- If you want a looping counter, use the exec token with a modulo operator. For example, `$exec$ c$counter$ %10 $end$` will loop the default counter between 0 and 9.*
+
 ### If token
 
 The if token inserts one of two possibilities depending on the truth value of a simple condition. The syntax is as follows :\
