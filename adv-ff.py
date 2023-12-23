@@ -318,6 +318,9 @@ def literal_action(tokens):
 def string_action(tokens):
     return(("string", *tokens.as_list()))
 
+def counter_action(tokens):
+    return(("counter", *tokens.as_list()))
+
 
 grammar     = pp.Forward()
 
@@ -329,13 +332,19 @@ kw          = {"ex_start"  : pp.Literal(f"{token_delimiter}exec{token_delimiter}
                }
 keyword     = pp.Or([_[1] for _ in kw.items()])
 
-literal     =  (pp.Literal(f"v").suppress()                             +
+literal     =  (pp.Literal("v").suppress()                              +
                 ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
                 pp.Group(grammar)                                       +
                 pp.Literal(f"{token_delimiter}").suppress()
                 )
 
-str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
+counter     =  (pp.Literal("c").suppress()                              +
+                ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
+                pp.Group(grammar)                                       +
+                pp.Literal(f"{token_delimiter}").suppress()
+                )
+
+str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
 
 ex_block    = kw["ex_start"]   + pp.Group(grammar)          + kw["end"]
 
@@ -348,16 +357,19 @@ if_block.set_parse_action(if_action)
 ex_block.set_parse_action(exec_action)
 str_block.set_parse_action(string_action)
 literal.set_parse_action(literal_action)
+counter.set_parse_action(counter_action)
 
 grammar.leave_whitespace()
 if_block.leave_whitespace()
 ex_block.leave_whitespace()
 literal.leave_whitespace()
+counter.leave_whitespace()
 str_block.leave_whitespace()
 
 grammar <<= pp.ZeroOrMore( ex_block
                          | if_block
                          | literal
+                         | counter
                          | str_block
                          )
 
@@ -367,6 +379,13 @@ grammar <<= pp.ZeroOrMore( ex_block
 ###### Interpreter ################################################################################
 ###################################################################################################
 
+class Counters():
+    """Holds the values of the counters and the currently selected one
+    """
+    data = {}
+    selected = None
+
+counters = Counters()
 
 def exec_eval(expr):
     """ Checks for validity and legality of exec token statement then evaluates it
@@ -416,6 +435,19 @@ def if_eval(expr):
         return eval(compile(node, "<string>", "eval"), {'__builtins__': None}, if_locals), 200
     except Exception as ex:
         return ex, 422
+
+
+def counter_eval(counter_id, increase=True):
+    try:
+        value = counters.data[counter_id]
+        if increase:
+            counters.data[counter_id] += 1
+
+    except KeyError:
+        value = 0
+        counters.data[counter_id] = int(increase)
+
+    return str(value)
 
 
 def parser_fetch_data(sources):
@@ -491,7 +523,7 @@ class ErrCounter():
     """
     counter = 0
 
-def interpreter(tree, data, err_counter=ErrCounter()):
+def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True):
     """ Builds an interpreted string from a parsed tree and data
         Works recursively on the tree
     """
@@ -503,7 +535,7 @@ def interpreter(tree, data, err_counter=ErrCounter()):
                 return_string += node[1]
 
             case "exec":
-                interpreted = interpreter(node[1], data, err_counter)
+                interpreted = interpreter(node[1], data, err_counter, increase_counters)
                 val, code = exec_eval(interpreted)
                 match code:
                     case 200:
@@ -519,7 +551,7 @@ def interpreter(tree, data, err_counter=ErrCounter()):
                         print(f"Failed exec : {interpreted} : {val}")
 
             case "if":
-                interpreted = interpreter(node[1], data, err_counter)
+                interpreted = interpreter(node[1], data, err_counter, increase_counters)
                 condition, code = if_eval(interpreted)
                 match code:
                     case 200:
@@ -537,9 +569,13 @@ def interpreter(tree, data, err_counter=ErrCounter()):
                         err_counter.counter +=1
                         print(f"Failed if : {interpreted} : {condition}")
 
+            case "counter":
+                interpreted = interpreter(node[1], data, err_counter, increase_counters)
+                return_string += counter_eval(interpreted, increase_counters)
+
             case "value":
                 try:
-                    interpreted = interpreter(node[1], data, err_counter)
+                    interpreted = interpreter(node[1], data, err_counter, increase_counters)
                     inds = interpreted.split("][")
                     startinds = inds[0].split("[")
                     startinds[0] = "0" if startinds[0] == "" else startinds[0]
@@ -585,7 +621,7 @@ def rec_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(rec_parser.sources)
-    return interpreter(rec_parser.tree, data)
+    return interpreter(rec_parser.tree, data, increase_counters=True)
 
 
 def rec_parser_tree_from_string(string):
@@ -624,7 +660,7 @@ def buf_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(buf_parser.sources)
-    return interpreter(buf_parser.tree, data)
+    return interpreter(buf_parser.tree, data, increase_counters=True)
 
 
 def buf_parser_tree_from_string(string):
@@ -671,6 +707,16 @@ def buf_parser_apply_cb(calldata):
 ###### UI building ################################################################################
 ###################################################################################################
 
+class SettingsHolder():
+    """ Holds the data settings of the script.
+        I really don't like doing that, but it's the only way I found to
+        update the settings through a button press.
+        (here the counter value display with the refresh counters button.)
+    """
+    settings = None
+
+settings_holder = SettingsHolder()
+
 
 def get_space():
     """ Whether filenames should be generated with or without spaces
@@ -712,7 +758,7 @@ def rec_tester(props, *args):
     else:
         data = parser_fetch_data(rec_parser.sources)
         error_counter = ErrCounter()
-        result = os_generate_formatted_filename("", get_space(), interpreter(rec_parser.tree, data, error_counter))
+        result = os_generate_formatted_filename("", get_space(), interpreter(rec_parser.tree, data, error_counter, increase_counters=False))
 
         obs.obs_property_set_long_description(  obs.obs_properties_get(props, "rec_result"), result)
         obs.obs_property_set_description(       obs.obs_properties_get(props, "rec_result"), "")
@@ -723,6 +769,8 @@ def rec_tester(props, *args):
             obs.obs_property_set_description(       obs.obs_properties_get(props, "rec_warning"), "Warning: ")
             obs.obs_property_text_set_info_type(    obs.obs_properties_get(props, "rec_warning"), obs.OBS_TEXT_INFO_WARNING)
 
+    fill_counters_list(props)
+    obs.obs_data_set_int(settings_holder.settings, "counter_val", counters.data[counters.selected])
     return True
 
 
@@ -742,7 +790,7 @@ def buf_tester(props, *args):
     else:
         data = parser_fetch_data(buf_parser.sources)
         error_counter = ErrCounter()
-        result = os_generate_formatted_filename("", get_space(), interpreter(buf_parser.tree, data, error_counter))
+        result = os_generate_formatted_filename("", get_space(), interpreter(buf_parser.tree, data, error_counter, increase_counters=False))
 
         obs.obs_property_set_long_description(  obs.obs_properties_get(props, "buf_result"), result)
         obs.obs_property_set_description(       obs.obs_properties_get(props, "buf_result"), "")
@@ -753,7 +801,47 @@ def buf_tester(props, *args):
             obs.obs_property_set_description(       obs.obs_properties_get(props, "buf_warning"), "Warning: ")
             obs.obs_property_text_set_info_type(    obs.obs_properties_get(props, "buf_warning"), obs.OBS_TEXT_INFO_WARNING)
 
+    fill_counters_list(props)
+    obs.obs_data_set_int(settings_holder.settings, "counter_val", counters.data[counters.selected])
     return True
+
+
+def fill_counters_list(props):
+    counter_list = obs.obs_properties_get(props, "counter_list")
+    obs.obs_property_list_clear(counter_list)
+    for counter_name in counters.data:
+        obs.obs_property_list_add_string(counter_list, "Default Counter" if (counter_name=="counter") else f"Counter : {counter_name}", f"{counter_name}")
+
+
+def refresh_counters(props, prop):
+    data = parser_fetch_data(rec_parser.sources)
+    interpreter(rec_parser.tree, data, increase_counters=False)
+    data = parser_fetch_data(buf_parser.sources)
+    interpreter(buf_parser.tree, data, increase_counters=False)
+
+    fill_counters_list(props)
+    obs.obs_data_set_int(settings_holder.settings, "counter_val", counters.data[counters.selected])
+    return True
+
+
+def remove_counter(props, prop):
+    if counters.selected and counters.selected != "counter":
+        counters.data.pop(counters.selected)
+    else:
+        print("Cannot remove default counter.")
+
+    fill_counters_list(props)
+    return True
+
+
+def counter_selected_modified(props, prop, settings):
+    counters.selected = obs.obs_data_get_string(settings, "counter_list")
+    obs.obs_data_set_int(settings, "counter_val", counters.data[counters.selected])
+    return True
+
+
+def counter_value_modified(props, prop, settings):
+    counters.data[counters.selected] = obs.obs_data_get_int(settings, "counter_val")
 
 
 class PropertiesFlags():
@@ -828,12 +916,25 @@ def script_defaults(settings):
     obs.obs_data_set_default_array(settings, "buf_source", init)
     obs.obs_data_array_release(init)
 
+    default_counter = obs.obs_data_get_default_obj(settings, "counters")
+    obs.obs_data_set_int(default_counter, "counter", 0)
+    obs.obs_data_set_default_obj(settings, "counters", default_counter)
+    obs.obs_data_release(default_counter)
+
 
 def script_properties():
     props = obs.obs_properties_create()
     # Padding so that it doesn't jump around (needs refining)
     blank = obs.obs_properties_add_text(props, "tblank",    "<p style='color:#00000000'>Formatting</p>",   obs.OBS_TEXT_INFO)
     obs.obs_property_set_long_description(blank, " ")
+
+    obs.obs_properties_add_button(              props, "counter_refresh",   "Refresh counters list",    refresh_counters)
+    c_list = obs.obs_properties_add_list(       props, "counter_list",      "Counters",                 obs.OBS_COMBO_TYPE_LIST,    obs.OBS_COMBO_FORMAT_STRING)
+    c_val = obs.obs_properties_add_int(         props, "counter_val",       "Counter Value",            0, 99999, 1)
+    obs.obs_properties_add_button(              props, "counter_remove",    "Remove counter",           remove_counter)
+    obs.obs_property_set_modified_callback(c_list,  counter_selected_modified)
+    obs.obs_property_set_modified_callback(c_val,   counter_value_modified)
+    fill_counters_list(props)
 
     obs.obs_properties_add_bool(            props, "rec_enable",    "Enable recording formatting")
     obs.obs_properties_add_editable_list(   props, "rec_source",    "Sources",          obs.OBS_EDITABLE_LIST_TYPE_STRINGS, None, None)
@@ -849,10 +950,8 @@ def script_properties():
     obs.obs_properties_add_text(            props, "buf_result",    " ",                obs.OBS_TEXT_INFO)
     obs.obs_properties_add_text(            props, "buf_warning",   " ",                obs.OBS_TEXT_INFO)
 
-
     obs.obs_property_set_modified_callback(obs.obs_properties_get(props, "rec_enable"), process_props_flags)
     obs.obs_property_set_modified_callback(obs.obs_properties_get(props, "buf_enable"), process_props_flags)
-
     process_props_flags(props)
     return props
 
@@ -873,6 +972,7 @@ def script_description():
 
 
 def script_load(settings):
+    settings_holder.settings = settings
     defaults = obs.obs_data_get_defaults(settings)
     data = json.loads(obs.obs_data_get_json(defaults)) | json.loads(obs.obs_data_get_json(settings))
     obs.obs_data_release(defaults)
@@ -883,6 +983,9 @@ def script_load(settings):
     obs.obs_frontend_add_event_callback(rec_parser_apply_cb)
     if flags.buffer_available:
         obs.obs_frontend_add_event_callback(buf_parser_connect_cb)
+
+    counters.data.update(data["counters"])
+    counters.selected = data["counter_list"]
 
 
 def script_update(settings):
@@ -904,5 +1007,10 @@ def script_update(settings):
         buf_parser.sources.append(item["value"])
 
 
-def script_unload():
-    pass
+
+def script_save(settings):
+    counters_data = obs.obs_data_create_from_json(json.dumps(counters.data))
+    obs.obs_data_set_obj(settings, "counters", counters_data)
+    obs.obs_data_release(counters_data)
+
+
