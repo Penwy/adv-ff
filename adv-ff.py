@@ -835,9 +835,11 @@ def remove_counter(props, prop):
 
 
 def counter_selected_modified(props, prop, settings):
-    counters.selected = obs.obs_data_get_string(settings, "counter_list")
-    obs.obs_data_set_int(settings, "counter_val", counters.data[counters.selected])
-    return True
+    selected_counter = obs.obs_data_get_string(settings, "counter_list")
+    if selected_counter:
+        counters.selected = selected_counter
+        obs.obs_data_set_int(settings, "counter_val", counters.data[counters.selected])
+        return True
 
 
 def counter_value_modified(props, prop, settings):
@@ -916,10 +918,12 @@ def script_defaults(settings):
     obs.obs_data_set_default_array(settings, "buf_source", init)
     obs.obs_data_array_release(init)
 
-    default_counter = obs.obs_data_get_default_obj(settings, "counters")
+    default_counter = obs.obs_data_create()
     obs.obs_data_set_int(default_counter, "counter", 0)
     obs.obs_data_set_default_obj(settings, "counters", default_counter)
     obs.obs_data_release(default_counter)
+
+    obs.obs_data_set_default_string(settings, "counter_list", "counter")
 
 
 def script_properties():
