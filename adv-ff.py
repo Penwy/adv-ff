@@ -523,7 +523,7 @@ class ErrCounter():
     """
     counter = 0
 
-def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True):
+def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sanitize=False):
     """ Builds an interpreted string from a parsed tree and data
         Works recursively on the tree
     """
@@ -595,6 +595,9 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True):
                     val = ""
                 return_string += str(val)
 
+    if sanitize:
+        return_string = re.sub(r"[\*\"<>:\|\?]", "_", return_string)
+
     return return_string[0:249]
 
 
@@ -621,7 +624,7 @@ def rec_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(rec_parser.sources)
-    return interpreter(rec_parser.tree, data, increase_counters=True)
+    return interpreter(rec_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
 
 
 def rec_parser_tree_from_string(string):
@@ -660,7 +663,7 @@ def buf_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(buf_parser.sources)
-    return interpreter(buf_parser.tree, data, increase_counters=True)
+    return interpreter(buf_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
 
 
 def buf_parser_tree_from_string(string):
@@ -758,7 +761,7 @@ def rec_tester(props, *args):
     else:
         data = parser_fetch_data(rec_parser.sources)
         error_counter = ErrCounter()
-        result = os_generate_formatted_filename("", get_space(), interpreter(rec_parser.tree, data, error_counter, increase_counters=False))
+        result = os_generate_formatted_filename("", get_space(), interpreter(rec_parser.tree, data, error_counter, increase_counters=False, sanitize=(platform.system()=="Windows")))
 
         obs.obs_property_set_long_description(  obs.obs_properties_get(props, "rec_result"), result)
         obs.obs_property_set_description(       obs.obs_properties_get(props, "rec_result"), "")
@@ -790,7 +793,7 @@ def buf_tester(props, *args):
     else:
         data = parser_fetch_data(buf_parser.sources)
         error_counter = ErrCounter()
-        result = os_generate_formatted_filename("", get_space(), interpreter(buf_parser.tree, data, error_counter, increase_counters=False))
+        result = os_generate_formatted_filename("", get_space(), interpreter(buf_parser.tree, data, error_counter, increase_counters=False, sanitize=(platform.system()=="Windows")))
 
         obs.obs_property_set_long_description(  obs.obs_properties_get(props, "buf_result"), result)
         obs.obs_property_set_description(       obs.obs_properties_get(props, "buf_result"), "")
