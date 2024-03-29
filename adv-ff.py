@@ -921,7 +921,7 @@ def script_defaults(settings):
     obs.obs_data_set_default_array(settings, "buf_source", init)
     obs.obs_data_array_release(init)
 
-    default_counter = obs.obs_data_create()
+    default_counter = obs.obs_data_get_default_obj(settings, "counters")
     obs.obs_data_set_int(default_counter, "counter", 0)
     obs.obs_data_set_default_obj(settings, "counters", default_counter)
     obs.obs_data_release(default_counter)
