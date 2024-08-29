@@ -76,6 +76,8 @@ if not pyp_satisfied:
 ###### Script customisation #######################################################################
 ###################################################################################################
 
+remove_zws = True
+
 
 token_delimiter = "$"
 
@@ -615,6 +617,9 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sa
 
     if sanitize:
         return_string = re.sub(r"[\*\"<>:\|\?]", "_", return_string)
+
+    if remove_zws:
+        return_string = re.sub(r"[\u180e\u200B\u200C\u200D\u2060\ufeff]", "", return_string)
 
     return return_string
 

@@ -108,6 +108,8 @@ I don't know why you'd want to do that but hey, you can.
 
 The following can be customised or added to, in the "Script customisation" section, at the start of the script file.
 
+- `remove_zws`: by default and because of Activision being weirdos with the CoD window title, any zero width whitespace (including mongolian vowel separator, zero width space, zero width non-joiner, zero width joiner, word joiner and zero-width non-breaking space) are removed from the filename generation. If for some reason you need any of those in your filename, set this to true.
+
 - `token_delimiter`: the character(s) used to delimit tokens. By nature, the character(s) used as delimiter can't be put directly in the filename, so if you want to put dollar signs in your filenames, change it to something else.
 
 - `source_fetch_proc`: when fetching data from sources, if the source's type id matches one listed in there, the procedures listed under it get called on it, and the specified values are retrieved from the calldata and added to the data available to the parser.\
