@@ -290,12 +290,30 @@ _bfree                          = wrap(libobs,
 
 
 def os_generate_formatted_filename(extension, space, file_format):
+    file_format = file_format[:valid_formatted_length(file_format)]
     formatted_p = _os_generate_formatted_filename(extension.encode("utf-8"), space, file_format.encode("utf-8"))
     value       = ct.c_char_p(formatted_p).value
     _bfree(formatted_p)
     if value:
         return value.decode("utf-8")
     return ""
+
+def valid_formatted_length(file_format):    # This is an abomination I really hope the filename formatting crop will be fixed soonish
+    available_length = 255 - 10             # We assume no extension will ever be more than 10 bytes, if there exists one that does, fuck that noise
+
+    formatted_p = _os_generate_formatted_filename("".encode("utf-8"), False, file_format.encode("utf-8"))
+    value       = ct.c_char_p(formatted_p).value
+    _bfree(formatted_p)
+
+    while len(value) > available_length:
+        file_format = file_format[:-1]
+        formatted_p = _os_generate_formatted_filename("".encode("utf-8"), False, file_format.encode("utf-8"))
+        value       = ct.c_char_p(formatted_p).value
+        _bfree(formatted_p)
+    return len(file_format)
+
+
+
 
 ###################################################################################################
 
@@ -598,7 +616,7 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sa
     if sanitize:
         return_string = re.sub(r"[\*\"<>:\|\?]", "_", return_string)
 
-    return return_string[0:249]
+    return return_string
 
 
 
@@ -624,7 +642,8 @@ def rec_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(rec_parser.sources)
-    return interpreter(rec_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
+    file_format = interpreter(rec_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
+    return file_format[:valid_formatted_length(file_format)]
 
 
 def rec_parser_tree_from_string(string):
@@ -641,6 +660,7 @@ def rec_parser_apply_cb(event):
     """
     match event:
         case obs.OBS_FRONTEND_EVENT_RECORDING_STARTING:
+
             config = obs.obs_frontend_get_profile_config()
             rec_parser.oldformat = obs.config_get_string(config, "Output",
                                                          "FilenameFormatting") or ""
@@ -663,7 +683,8 @@ def buf_parser_interpret():
     """ Fetches data and returns interpreted string
     """
     data = parser_fetch_data(buf_parser.sources)
-    return interpreter(buf_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
+    file_format = interpreter(buf_parser.tree, data, increase_counters=True, sanitize=(platform.system()=="Windows"))
+    return file_format[:valid_formatted_length(file_format)]
 
 
 def buf_parser_tree_from_string(string):
