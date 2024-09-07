@@ -941,11 +941,13 @@ def script_defaults(settings):
     obs.obs_data_set_default_bool(settings, "rec_enable", False)
     obs.obs_data_set_default_bool(settings, "buf_enable", False)
 
-    # Somehow, data_get_json segfaults on script reload if the defaults are initialised with data_array_create, don't ask me why
-    init = obs.obs_data_get_default_array(settings, "rec_source")
-    obs.obs_data_set_default_array(settings, "rec_source", init)
-    obs.obs_data_set_default_array(settings, "buf_source", init)
-    obs.obs_data_array_release(init)
+    # Somehow, data_get_json segfaults on script reload if the defaults are initialised with data_array_create, don't ask me why.
+    # Sept 8 2024 : found out why, thanks Vix, and fuck data arrays, it's too complex to explain in comments if you need to know, ask me in the obs discord.
+
+    obs.obs_data_set_default_array(settings, "rec_source", None)
+    obs.obs_data_set_default_array(settings, "buf_source", None)
+
+
 
     default_counter = obs.obs_data_get_default_obj(settings, "counters")
     obs.obs_data_set_int(default_counter, "counter", 0)
