@@ -65,9 +65,12 @@ if not pyp_satisfied:
     else:
         py_executable = [f"python{sys.version_info[0]}.{sys.version_info[1]}"]    # No, sys.executable is not trustworthy in the slightest
 
-    subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
-    import pyparsing as pp
-
+    try:
+        subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
+        import pyparsing as pp
+    except Exception as exc:
+        raise ImportError("Could not install or find pyparsing, make sure it is installed on the python executable used by obs"
+                          ) from exc
 
 
 
