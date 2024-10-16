@@ -211,7 +211,7 @@ def source_post_process(source, settings):
 ###################################################################################################
 
 
-if platform.system() == "Linux":
+if platform.system() == "Linux" or  platform.system() == "Darwin":
     libobs = ct.CDLL(ct.util.find_library("obs"))
     libfe = ct.CDLL(ct.util.find_library("obs-frontend-api"))
 else:
