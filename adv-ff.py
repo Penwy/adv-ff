@@ -27,6 +27,7 @@ import ctypes.util
 import ast
 import json
 import math, cmath, re, random, time
+import linecache as lc
 
 import obspython as obs
 
@@ -345,6 +346,9 @@ def string_action(tokens):
 def counter_action(tokens):
     return(("counter", *tokens.as_list()))
 
+def file_action(tokens):
+    return(("file", *tokens.as_list()))
+
 
 grammar     = pp.Forward()
 
@@ -368,6 +372,12 @@ counter     =  (pp.Literal("c").suppress()                              +
                 pp.Literal(f"{token_delimiter}").suppress()
                 )
 
+file        =  (pp.Literal("f").suppress()                              +
+                ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
+                pp.Group(grammar)                                       +
+                pp.Literal(f"{token_delimiter}").suppress()
+                )
+
 str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
 
 ex_block    = kw["ex_start"]   + pp.Group(grammar)          + kw["end"]
@@ -382,18 +392,21 @@ ex_block.set_parse_action(exec_action)
 str_block.set_parse_action(string_action)
 literal.set_parse_action(literal_action)
 counter.set_parse_action(counter_action)
+file.set_parse_action(file_action)
 
 grammar.leave_whitespace()
 if_block.leave_whitespace()
 ex_block.leave_whitespace()
 literal.leave_whitespace()
 counter.leave_whitespace()
+file.leave_whitespace()
 str_block.leave_whitespace()
 
 grammar <<= pp.ZeroOrMore( ex_block
                          | if_block
                          | literal
                          | counter
+                         | file
                          | str_block
                          )
 
@@ -402,6 +415,29 @@ grammar <<= pp.ZeroOrMore( ex_block
 ###################################################################################################
 ###### Interpreter ################################################################################
 ###################################################################################################
+
+class Files():
+    """ PRovides access to the data of a given file
+    """
+    access = False
+    _path = None
+
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, path):
+        self._path = path
+        try:
+            with open(self._path, 'r', encoding="utf-8") as file:
+                self.access = True
+        except:
+            self.access = False
+
+files = Files()
+
+
 
 class Counters():
     """Holds the values of the counters and the currently selected one
@@ -596,6 +632,16 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sa
             case "counter":
                 interpreted = interpreter(node[1], data, err_counter, increase_counters)
                 return_string += counter_eval(interpreted, increase_counters)
+
+            case "file":
+                interpreted = interpreter(node[1], data, err_counter, increase_counters)
+                try:
+                    val = lc.getline(files.path, int(interpreted)).rstrip()
+                except ValueError as ex:
+                    err_counter.counter +=1
+                    print(f"Malformed line number : {interpreted} in file {files.path}")
+                    val = ""
+                return_string += str(val)
 
             case "value":
                 try:
@@ -959,6 +1005,7 @@ def script_defaults(settings):
     obs.obs_data_release(default_counter)
 
     obs.obs_data_set_default_string(settings, "counter_list", "counter")
+    obs.obs_data_set_default_string(settings, "file_select", "")
 
 
 def script_properties():
@@ -974,6 +1021,7 @@ def script_properties():
     obs.obs_property_set_modified_callback(c_list,  counter_selected_modified)
     obs.obs_property_set_modified_callback(c_val,   counter_value_modified)
     fill_counters_list(props)
+    obs.obs_properties_add_path(            props, "file_select",   "Input file",       obs.OBS_PATH_FILE, None, None)
 
     obs.obs_properties_add_bool(            props, "rec_enable",    "Enable recording formatting")
     obs.obs_properties_add_editable_list(   props, "rec_source",    "Sources",          obs.OBS_EDITABLE_LIST_TYPE_STRINGS, None, None)
@@ -1044,6 +1092,10 @@ def script_update(settings):
     buf_parser.sources = []
     for item in (data["buf_source"]):
         buf_parser.sources.append(item["value"])
+
+    files.path = data["file_select"]
+
+
 
 
 
