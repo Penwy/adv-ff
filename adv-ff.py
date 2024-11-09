@@ -876,7 +876,8 @@ def counter_selected_modified(props, prop, settings):
 
 
 def counter_value_modified(props, prop, settings):
-    counters.data[counters.selected] = obs.obs_data_get_int(settings, "counter_val")
+    if json.loads(obs.obs_data_get_json(settings)):
+        counters.data[counters.selected] = obs.obs_data_get_int(settings, "counter_val")
 
 
 class PropertiesFlags():
@@ -953,10 +954,14 @@ def script_defaults(settings):
 
 
 
+
     default_counter = obs.obs_data_get_default_obj(settings, "counters")
-    obs.obs_data_set_int(default_counter, "counter", 0)
-    obs.obs_data_set_default_obj(settings, "counters", default_counter)
+    if not default_counter:
+        default_counter = obs.obs_data_create()
+        obs.obs_data_set_default_obj(settings, "counters", default_counter)
+    obs.obs_data_set_default_int(default_counter, "counter", 0)
     obs.obs_data_release(default_counter)
+    obs.obs_data_set_default_int(settings, "counter_val", 0)
 
     obs.obs_data_set_default_string(settings, "counter_list", "counter")
 
