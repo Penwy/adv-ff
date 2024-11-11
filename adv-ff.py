@@ -30,16 +30,24 @@ import math, cmath, re, random, time
 
 import obspython as obs
 
-print("adv-ff : starting load of version 1.1.2")
+version = {
+    "major" : 1,
+    "minor" : 1,
+    "patch" : 2,
+}
 
 if sys.version_info[0] < 3 or sys.version_info[1] < 9:
     print("Python version < 3.9, correct behaviour is not guaranteed")
+
+print(f"adv-ff starting load of version {('.').join((str(n) for _, n in version.items()))} on python {sys.version}")
+
 
 
 
 if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
     print("Running under Flatpak, pyparsing import might have issues, report on Github if so.")
     sys.path.append(os.path.expanduser(f'~/.local/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages/'))
+
 
 try:
     pyp_version = meta.version("pyparsing")
@@ -70,8 +78,7 @@ if not pyp_satisfied:
         subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
         import pyparsing as pp
     except Exception as exc:
-        raise ImportError("Could not install or find pyparsing, make sure it is installed on the python executable used by obs"
-                          ) from exc
+        pp = None
 
 
 
@@ -329,73 +336,73 @@ def valid_formatted_length(file_format):    # This is an abomination I really ho
 ###### Parser Grammar #############################################################################
 ###################################################################################################
 
+if pp:
+    def if_action(tokens):
+        return(("if", *tokens.as_list()))
 
-def if_action(tokens):
-    return(("if", *tokens.as_list()))
+    def exec_action(tokens):
+        return(("exec", *tokens.as_list()))
 
-def exec_action(tokens):
-    return(("exec", *tokens.as_list()))
+    def literal_action(tokens):
+        return(("value", *tokens.as_list()))
 
-def literal_action(tokens):
-    return(("value", *tokens.as_list()))
+    def string_action(tokens):
+        return(("string", *tokens.as_list()))
 
-def string_action(tokens):
-    return(("string", *tokens.as_list()))
-
-def counter_action(tokens):
-    return(("counter", *tokens.as_list()))
+    def counter_action(tokens):
+        return(("counter", *tokens.as_list()))
 
 
-grammar     = pp.Forward()
+    grammar     = pp.Forward()
 
-kw          = {"ex_start"  : pp.Literal(f"{token_delimiter}exec{token_delimiter}").suppress(),
-               "if_start"  : pp.Literal(f"{token_delimiter}if{token_delimiter}").suppress(),
-               "if_then"   : pp.Literal(f"{token_delimiter}then{token_delimiter}").suppress(),
-               "if_else"   : pp.Literal(f"{token_delimiter}else{token_delimiter}").suppress(),
-               "end"       : pp.Literal(f"{token_delimiter}end{token_delimiter}").suppress(),
-               }
-keyword     = pp.Or([_[1] for _ in kw.items()])
+    kw          = {"ex_start"  : pp.Literal(f"{token_delimiter}exec{token_delimiter}").suppress(),
+                   "if_start"  : pp.Literal(f"{token_delimiter}if{token_delimiter}").suppress(),
+                   "if_then"   : pp.Literal(f"{token_delimiter}then{token_delimiter}").suppress(),
+                   "if_else"   : pp.Literal(f"{token_delimiter}else{token_delimiter}").suppress(),
+                   "end"       : pp.Literal(f"{token_delimiter}end{token_delimiter}").suppress(),
+                   }
+    keyword     = pp.Or([_[1] for _ in kw.items()])
 
-literal     =  (pp.Literal("v").suppress()                              +
-                ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
-                pp.Group(grammar)                                       +
-                pp.Literal(f"{token_delimiter}").suppress()
-                )
+    literal     =  (pp.Literal("v").suppress()                              +
+                    ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
+                    pp.Group(grammar)                                       +
+                    pp.Literal(f"{token_delimiter}").suppress()
+                    )
 
-counter     =  (pp.Literal("c").suppress()                              +
-                ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
-                pp.Group(grammar)                                       +
-                pp.Literal(f"{token_delimiter}").suppress()
-                )
+    counter     =  (pp.Literal("c").suppress()                              +
+                    ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
+                    pp.Group(grammar)                                       +
+                    pp.Literal(f"{token_delimiter}").suppress()
+                    )
 
-str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
+    str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
 
-ex_block    = kw["ex_start"]   + pp.Group(grammar)          + kw["end"]
+    ex_block    = kw["ex_start"]   + pp.Group(grammar)          + kw["end"]
 
-if_block    = (kw["if_start"]  + pp.Group(grammar)          +
-               kw["if_then"]   + pp.Group(grammar)          +
-              (kw["if_else"]   + pp.Group(grammar))[..., 1] + kw["end"]
-               )
+    if_block    = (kw["if_start"]  + pp.Group(grammar)          +
+                   kw["if_then"]   + pp.Group(grammar)          +
+                  (kw["if_else"]   + pp.Group(grammar))[..., 1] + kw["end"]
+                   )
 
-if_block.set_parse_action(if_action)
-ex_block.set_parse_action(exec_action)
-str_block.set_parse_action(string_action)
-literal.set_parse_action(literal_action)
-counter.set_parse_action(counter_action)
+    if_block.set_parse_action(if_action)
+    ex_block.set_parse_action(exec_action)
+    str_block.set_parse_action(string_action)
+    literal.set_parse_action(literal_action)
+    counter.set_parse_action(counter_action)
 
-grammar.leave_whitespace()
-if_block.leave_whitespace()
-ex_block.leave_whitespace()
-literal.leave_whitespace()
-counter.leave_whitespace()
-str_block.leave_whitespace()
+    grammar.leave_whitespace()
+    if_block.leave_whitespace()
+    ex_block.leave_whitespace()
+    literal.leave_whitespace()
+    counter.leave_whitespace()
+    str_block.leave_whitespace()
 
-grammar <<= pp.ZeroOrMore( ex_block
-                         | if_block
-                         | literal
-                         | counter
-                         | str_block
-                         )
+    grammar <<= pp.ZeroOrMore( ex_block
+                             | if_block
+                             | literal
+                             | counter
+                             | str_block
+                             )
 
 
 
@@ -929,6 +936,8 @@ def process_props_flags(props, *args):
 
 
 def script_defaults(settings):
+    if not pp:
+        return
     config = obs.obs_frontend_get_profile_config()
     rec_parser.oldformat = obs.config_get_string(config, "Output",
                                                  "FilenameFormatting") or ""
@@ -972,6 +981,9 @@ def script_properties():
     blank = obs.obs_properties_add_text(props, "tblank",    "<p style='color:#00000000'>Formatting</p>",   obs.OBS_TEXT_INFO)
     obs.obs_property_set_long_description(blank, " ")
 
+    if not pp:
+        return props
+
     obs.obs_properties_add_button(              props, "counter_refresh",   "Refresh counters list",    refresh_counters)
     c_list = obs.obs_properties_add_list(       props, "counter_list",      "Counters",                 obs.OBS_COMBO_TYPE_LIST,    obs.OBS_COMBO_FORMAT_STRING)
     c_val = obs.obs_properties_add_int(         props, "counter_val",       "Counter Value",            0, 99999, 1)
@@ -1005,7 +1017,15 @@ def script_description():
     """
     desc = ("<h4>Advanced Filename Formatter</h4>"
             "Allows dynamically generating filenames from sources state and more.<br>"
-            "Please read <a href='https://github.com/Penwy/adv-ff/blob/main/docs/doc.md'>the docs</a>.")
+            "Please read <a href='https://github.com/Penwy/adv-ff/blob/main/docs/doc.md'>the docs</a>."
+            )
+    if not pp:
+        desc += ("<br>"
+                 "<br>"
+                 "<font color=#ff0000>This script requires the <a href='https://pypi.org/project/pyparsing/'>PyParsing</a> module to properly function, but it wasn't found and failed to install.</font><br>"
+                 "<font color=#ff0000>Check <a href='https://github.com/Penwy/adv-ff/tree/main/pyparsing-troubleshoot'>this page</a> for possible solutions.</font><br>"
+                 )
+        return desc
     return desc
 
 
@@ -1016,6 +1036,8 @@ def script_description():
 
 
 def script_load(settings):
+    if not pp:
+        return
     settings_holder.settings = settings
     defaults = obs.obs_data_get_defaults(settings)
     data = json.loads(obs.obs_data_get_json(defaults)) | json.loads(obs.obs_data_get_json(settings))
@@ -1033,6 +1055,8 @@ def script_load(settings):
 
 
 def script_update(settings):
+    if not pp:
+        return
     defaults = obs.obs_data_get_defaults(settings)
     data = json.loads(obs.obs_data_get_json(defaults)) | json.loads(obs.obs_data_get_json(settings))
     obs.obs_data_release(defaults)
@@ -1053,6 +1077,8 @@ def script_update(settings):
 
 
 def script_save(settings):
+    if not pp:
+        return
     counters_data = obs.obs_data_create_from_json(json.dumps(counters.data))
     obs.obs_data_set_obj(settings, "counters", counters_data)
     obs.obs_data_release(counters_data)
