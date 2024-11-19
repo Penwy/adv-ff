@@ -352,6 +352,11 @@ _os_generate_formatted_filename = wrap(libobs,
                                        restype=ct.c_void_p,
                                        argtypes=[ct.c_char_p, ct.c_bool, ct.c_char_p])
 
+_obs_frontend_get_last_recording = wrap(libfe,
+                                       "obs_frontend_get_last_recording",
+                                       restype=ct.c_void_p,
+                                       argtypes=[])
+
 _bfree                          = wrap(libobs,
                                        "bfree",
                                        restype=None,
@@ -363,6 +368,15 @@ def os_generate_formatted_filename(extension, space, file_format):
     formatted_p = _os_generate_formatted_filename(extension.encode("utf-8"), space, file_format.encode("utf-8"))
     value       = ct.c_char_p(formatted_p).value
     _bfree(formatted_p)
+    if value:
+        return value.decode("utf-8")
+    return ""
+
+
+def obs_frontend_get_last_recording():
+    filepath_p = _obs_frontend_get_last_recording()
+    value       = ct.c_char_p(filepath_p).value
+    _bfree(filepath_p)
     if value:
         return value.decode("utf-8")
     return ""
@@ -691,7 +705,6 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sa
     return return_string
 
 
-
 ###################################################################################################
 ###### Parsers ####################################################################################
 ###################################################################################################
@@ -704,10 +717,66 @@ class Parser():
     sources     = []
     tree        = []
 
+class Splitfile():
+    """ Holds data about filesplitting settings
+    """
+    old_mode         = None
+    size            = float("inf")
+    time            = float("inf")
+    hotkey          = HotkeyOverride()
+    current_file    = None
+    split_pending   = False
+
 
 
 ############################# Recording output parser
 rec_parser = Parser()
+split_file = Splitfile()
+
+def split_file_done_callback(*args):
+    """ Signals that the last requested file split has been done
+    """
+    split_file.current_file = obs_frontend_get_last_recording()
+    split_file.split_pending = False
+
+
+@obs_hotkey_func
+def split_file_hotkey_callback(*args):
+    """ Overrides the default callback for the split file hotkey
+    """
+    if not split_file.split_pending:
+        rec = obs.obs_frontend_get_recording_output()
+        data = obs.obs_output_get_settings(rec)
+        obs.obs_data_set_string(data, 'format', rec_parser_interpret())
+        obs.obs_data_release(data)
+        obs.obs_output_release(rec)
+
+        split_file.split_pending = True
+        split_file.hotkey.oldfunc(*args)
+
+
+def split_file_auto_callback(*args):
+    """ operates the Time and Size auto filesplits
+    """
+    if not split_file.split_pending:
+
+        try:
+            if (split_file.old_mode == "Size"
+                and os.path.getsize(split_file.current_file) < split_file.size):
+                return
+        except FileNotFoundError:
+            return
+
+        print("in auto callback")
+        rec = obs.obs_frontend_get_recording_output()
+        data = obs.obs_output_get_settings(rec)
+        obs.obs_data_set_string(data, 'format', rec_parser_interpret())
+        obs.obs_data_release(data)
+        obs.obs_output_release(rec)
+
+        split_file.split_pending = True
+        obs.obs_frontend_recording_split_file()
+
 
 
 def rec_parser_interpret():
@@ -740,10 +809,48 @@ def rec_parser_apply_cb(event):
                 obs.config_set_string(config, "Output",
                                       "FilenameFormatting", rec_parser_interpret())
 
+                if (obs.config_get_string(config, "Output", "Mode") == "Advanced"
+                    and obs.config_get_bool(config, "AdvOut", "RecSplitFile")):
+                    # If one of the non-manual filesplitting types was selected, change to manual
+                    # and divert the check for filesplitting to our own function
+                    split_file.hotkey.activate(True)
+                    split_file.old_mode = obs.config_get_string(config, "AdvOut", "RecSplitFileType")
+                    obs.config_set_string(config, "AdvOut", "RecSplitFileType", "Manual")
+
+                    rec = obs.obs_frontend_get_recording_output()
+                    obs.signal_handler_connect(obs.obs_output_get_signal_handler(rec),
+                                               "file_changed", split_file_done_callback)
+                    obs.obs_output_release(rec)
+
+                    match split_file.old_mode:
+                        case "Time":
+                            obs.timer_add(split_file_auto_callback,
+                                          obs.config_get_int(config, "AdvOut", "RecSplitFileTime") * 60000)
+                        case "Size":
+                            obs.timer_add(split_file_auto_callback, 1000)
+                            split_file.size = obs.config_get_int(config, "AdvOut", "RecSplitFileSize") * 1000000
+
+
         case obs.OBS_FRONTEND_EVENT_RECORDING_STARTED:
+            if flags.record_enabled:
+                if split_file.old_mode == "Size":
+                    split_file.current_file = obs_frontend_get_last_recording()
+
             config = obs.obs_frontend_get_profile_config()
             obs.config_set_string(config, "Output",
                                   "FilenameFormatting", rec_parser.oldformat)
+
+
+        case obs.OBS_FRONTEND_EVENT_RECORDING_STOPPED:
+            if split_file.old_mode:
+                obs.timer_remove(split_file_auto_callback)
+                split_file.hotkey.activate(False)
+
+                config = obs.obs_frontend_get_profile_config()
+                obs.config_set_string(config, "AdvOut", "RecSplitFileType", split_file.old_mode)
+                split_file.old_mode = None
+
+
 
 
 
@@ -1108,6 +1215,27 @@ def script_load(settings):
 
     counters.data.update(data["counters"])
     counters.selected = data["counter_list"]
+
+    @obs_hotkey_enum_func
+    def get_split_hotkey(dat, hotkey_id, hotkey):
+        if obs.obs_hotkey_get_name(hotkey).decode("utf8") == "OBSBasic.SplitFile":
+            split_file.hotkey.assign_hk(hotkey.contents)
+            return False
+        return True
+
+    obs.obs_enum_hotkeys(get_split_hotkey, None)
+    split_file.hotkey.assign_override(split_file_hotkey_callback)
+
+
+def script_unload():
+    if split_file.old_mode:
+        obs.timer_remove(split_file_auto_callback)
+        split_file.hotkey.activate(False)
+
+        config = obs.obs_frontend_get_profile_config()
+        obs.config_set_string(config, "AdvOut", "RecSplitFileType", split_file.old_mode)
+        split_file.old_mode = None
+
 
 
 def script_update(settings):
