@@ -288,6 +288,62 @@ obs.obs_frontend_get_profile_config = _obs_frontend_get_profile_config
 
 
 
+#### Wrapping for hotkey manipulation
+###################################################################################################
+
+class ctHotkey(ct.Structure):
+    pass
+
+obs_hotkey_enum_func = ct.CFUNCTYPE(ct.c_bool, ct.c_void_p, ct.c_size_t, ct.POINTER(ctHotkey))
+
+obs_hotkey_func = ct.CFUNCTYPE(ct.c_void_p, ct.c_size_t, ct.POINTER(ctHotkey), ct.c_bool)
+
+
+ctHotkey._fields_ = (
+                ("id", ct.c_size_t),
+                ("name", ct.c_char_p),
+                ("description", ct.c_char_p),
+                ("func", obs_hotkey_func),
+                ("data", ct.c_void_p),
+                )
+
+
+obs.obs_hotkey_get_name = wrap(libobs,
+                               "obs_hotkey_get_name",
+                               restype=ct.c_char_p,
+                               argtypes=[ct.POINTER(ctHotkey)])
+
+obs.obs_enum_hotkeys    = wrap(libobs,
+                               "obs_enum_hotkeys",
+                               restype=None,
+                               argtypes=[obs_hotkey_enum_func, ct.c_void_p])
+
+
+class HotkeyOverride():
+    def __init__(self):
+        self.active = False
+        self.hotkey = None
+        self.newfunc = None
+        self.oldfunc = None
+
+    def assign_override(self, func):
+        self.newfunc = func
+        if self.hotkey and self.active:
+            self.hotkey.func = self.newfunc
+
+    def assign_hk(self, hotkey):
+        self.hotkey = hotkey
+        self.oldfunc = type(hotkey.func)()
+        ct.pointer(self.oldfunc)[0] = hotkey.func
+
+    def activate(self, active):
+        if self.hotkey and active and self.newfunc:
+            self.hotkey.func = self.newfunc
+        if self.hotkey and not active:
+            self.hotkey.func = self.oldfunc
+        self.active = active
+
+
 #### Necessary to be able to bfree it to not leak memory
 ###################################################################################################
 
