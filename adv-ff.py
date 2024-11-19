@@ -34,6 +34,7 @@ version = {
     "major" : 1,
     "minor" : 1,
     "patch" : 2,
+    "variant" : ""
 }
 
 if sys.version_info[0] < 3 or sys.version_info[1] < 9:
@@ -71,6 +72,8 @@ if not pyp_satisfied:
     elif platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
         py_executable = ['flatpak-spawn', '--host', f"python{sys.version_info[0]}.{sys.version_info[1]}"]
         options = ['--user', '--force-reinstall']
+    elif platform.system() == "Darwin":
+        py_executable = [os.path.join(sys.exec_prefix, "/bin/python3")]
     else:
         py_executable = [f"python{sys.version_info[0]}.{sys.version_info[1]}"]    # No, sys.executable is not trustworthy in the slightest
 
@@ -222,7 +225,7 @@ def source_post_process(source, settings):
 ###################################################################################################
 
 
-if platform.system() == "Linux" or  platform.system() == "Darwin":
+if platform.system() == "Linux" or platform.system() == "Darwin":
     libobs = ct.CDLL(ct.util.find_library("obs"))
     libfe = ct.CDLL(ct.util.find_library("obs-frontend-api"))
 else:
@@ -728,7 +731,6 @@ class Splitfile():
     split_pending   = False
 
 
-
 ############################# Recording output parser
 rec_parser = Parser()
 split_file = Splitfile()
@@ -776,7 +778,6 @@ def split_file_auto_callback(*args):
 
         split_file.split_pending = True
         obs.obs_frontend_recording_split_file()
-
 
 
 def rec_parser_interpret():
