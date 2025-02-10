@@ -21,6 +21,7 @@ import os.path
 import platform
 import subprocess
 import importlib.metadata as meta
+import logging
 
 import ctypes as ct
 import ctypes.util
@@ -44,12 +45,6 @@ print(f"adv-ff starting load of version {('.').join((str(n) for _, n in version.
 
 
 
-
-if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
-    print("Running under Flatpak, pyparsing import might have issues, report on Github if so.")
-    sys.path.append(os.path.expanduser(f'~/.local/lib/python{sys.version_info[0]}.{sys.version_info[1]}/site-packages/'))
-
-
 try:
     pyp_version = meta.version("pyparsing")
     if int(pyp_version[0]) >= 3:
@@ -66,21 +61,26 @@ except (meta.PackageNotFoundError, ModuleNotFoundError):
 
 if not pyp_satisfied:
     print("Pyparsing requirements not satisfied, attempting pip install")
-    options = []
+    options = ['--target', sys.path[-1]]
+
     if platform.system() == "Windows":
         py_executable = [os.path.join(sys.exec_prefix, "python")]
-    elif platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
-        py_executable = ['flatpak-spawn', '--host', f"python{sys.version_info[0]}.{sys.version_info[1]}"]
-        options = ['--user', '--force-reinstall']
     elif platform.system() == "Darwin":
-        py_executable = [os.path.join(sys.exec_prefix, "/bin/python3")]
+        py_executable = [os.path.join(sys.exec_prefix, f"bin/python{sys.version_info[0]}.{sys.version_info[1]}")]
     else:
         py_executable = [f"python{sys.version_info[0]}.{sys.version_info[1]}"]    # No, sys.executable is not trustworthy in the slightest
 
     try:
-        subprocess.check_call([*py_executable, '-m', 'pip', 'install', '--upgrade', 'pyparsing', *options])
+        if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
+            subprocess.check_call([*py_executable, '-m', 'ensurepip'])          # Flatpak is weirdge
+
+        subprocess.check_call([*py_executable, '-m', 'pip', 'install',  *options, '--upgrade', 'pyparsing'])
         import pyparsing as pp
+        print("Pyparsing successfully imported")
+
     except Exception as exc:
+        print("pyparsing import failed :")
+        logging.exception(exc)
         pp = None
 
 
