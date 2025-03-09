@@ -242,55 +242,6 @@ def wrap(lib, funcname, restype, argtypes):
     return func
 
 
-#### Necessary wrapping for obs < 30.0, uncomment if necessary
-'''################################################################################################
-
-class ctConfig(ct.Structure):
-    pass
-
-_config_set_string                  = wrap(libobs,
-                                           "config_set_string",
-                                           restype=None,
-                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p, ct.c_char_p])
-
-_config_get_string                  = wrap(libobs,
-                                           "config_get_string",
-                                           restype=ct.c_char_p,
-                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
-
-_config_get_bool                    = wrap(libobs,
-                                           "config_get_bool",
-                                           restype=ct.c_bool,
-                                           argtypes=[ct.POINTER(ctConfig), ct.c_char_p, ct.c_char_p])
-
-_obs_frontend_get_profile_config    = wrap(libfe,
-                                           "obs_frontend_get_profile_config",
-                                           restype=ct.POINTER(ctConfig),
-                                           argtypes=None)
-
-
-def config_set_string(config, section, name, value):
-    _config_set_string(config, section.encode("utf-8"), name.encode("utf-8"), value.encode("utf-8"))
-
-def config_get_string(config, section, name):
-    res = _config_get_string(config, section.encode("utf-8"), name.encode("utf-8"))
-    if res:
-        return res.decode("utf-8")
-    return ""
-
-def config_get_bool(config, section, name):
-    return _config_get_bool(config, section.encode("utf-8"), name.encode("utf-8"))
-
-
-obs.config_set_string               = config_set_string
-obs.config_get_string               = config_get_string
-obs.config_get_bool                 = config_get_bool
-obs.obs_frontend_get_profile_config = _obs_frontend_get_profile_config
-
-'''################################################################################################
-
-
-
 #### Wrapping for hotkey manipulation
 ###################################################################################################
 
