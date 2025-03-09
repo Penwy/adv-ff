@@ -562,11 +562,8 @@ def parser_fetch_data(sources):
         source = obs.obs_get_source_by_name(source_name)
         if source:
             source_data     = obs.obs_source_get_settings(source)
-            data_defaults   = obs.obs_data_get_defaults(source_data)
-            defaults        = json.loads(obs.obs_data_get_json(data_defaults))
-            settings        = defaults | json.loads(obs.obs_data_get_json(source_data))
+            settings        = json.loads(obs.obs_data_get_json_with_defaults(source_data))
             obs.obs_data_release(source_data)
-            obs.obs_data_release(data_defaults)
 
             settings["width"]       = obs.obs_source_get_width(source)
             settings["height"]      = obs.obs_source_get_height(source)
@@ -1047,7 +1044,7 @@ def counter_selected_modified(props, prop, settings):
 
 
 def counter_value_modified(props, prop, settings):
-    if json.loads(obs.obs_data_get_json(settings)):
+    if json.loads(obs.obs_data_get_json_with_defaults(settings)):
         counters.data[counters.selected] = obs.obs_data_get_int(settings, "counter_val")
 
 
@@ -1126,8 +1123,6 @@ def script_defaults(settings):
     obs.obs_data_set_default_array(settings, "buf_source", None)
 
 
-
-
     default_counter = obs.obs_data_get_default_obj(settings, "counters")
     if not default_counter:
         default_counter = obs.obs_data_create()
@@ -1203,9 +1198,7 @@ def script_load(settings):
     if not pp:
         return
     settings_holder.settings = settings
-    defaults = obs.obs_data_get_defaults(settings)
-    data = json.loads(obs.obs_data_get_json(defaults)) | json.loads(obs.obs_data_get_json(settings))
-    obs.obs_data_release(defaults)
+    data = json.loads(obs.obs_data_get_json_with_defaults(settings))
 
     flags.record_enabled =  data["rec_enable"]
     flags.buffer_enabled =  data["buf_enable"] if flags.buffer_available else False
@@ -1242,9 +1235,7 @@ def script_unload():
 def script_update(settings):
     if not pp:
         return
-    defaults = obs.obs_data_get_defaults(settings)
-    data = json.loads(obs.obs_data_get_json(defaults)) | json.loads(obs.obs_data_get_json(settings))
-    obs.obs_data_release(defaults)
+    data = json.loads(obs.obs_data_get_json_with_defaults(settings))
 
     flags.record_enabled =  data["rec_enable"]
     flags.buffer_enabled =  data["buf_enable"] if flags.buffer_available else False
@@ -1267,5 +1258,3 @@ def script_save(settings):
     counters_data = obs.obs_data_create_from_json(json.dumps(counters.data))
     obs.obs_data_set_obj(settings, "counters", counters_data)
     obs.obs_data_release(counters_data)
-
-
