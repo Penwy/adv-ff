@@ -38,6 +38,13 @@ version = {
     "variant" : ""
 }
 
+obs_required_version = {
+    "major" : 30,
+    "minor" : 2,
+    "patch" : 0,
+    "variant" : ""
+}
+
 if sys.version_info[0] < 3 or sys.version_info[1] < 9:
     print("Python version < 3.9, correct behaviour is not guaranteed")
 
@@ -85,6 +92,16 @@ if not pyp_satisfied:
 
 
 
+
+###################################################################################################
+###### OBS Version Check #######################################################################
+###################################################################################################
+
+obs_version = obs.obs_get_version()
+minimum_required = ((obs_required_version['major']<<24) |
+                    (obs_required_version['minor']<<16) |
+                    (obs_required_version['patch']<<0))
+obs_version_check = obs_version >= minimum_required
 
 ###################################################################################################
 ###### Script customisation #######################################################################
@@ -1048,7 +1065,7 @@ def process_props_flags(props, *args):
 
 
 def script_defaults(settings):
-    if not pp:
+    if not (pp and obs_version_check):
         return
     config = obs.obs_frontend_get_profile_config()
     rec_parser.oldformat = obs.config_get_string(config, "Output",
@@ -1091,7 +1108,7 @@ def script_properties():
     blank = obs.obs_properties_add_text(props, "tblank",    "<p style='color:#00000000'>Formatting</p>",   obs.OBS_TEXT_INFO)
     obs.obs_property_set_long_description(blank, " ")
 
-    if not pp:
+    if not (pp and obs_version_check):
         return props
 
     obs.obs_properties_add_button(              props, "counter_refresh",   "Refresh counters list",    refresh_counters)
@@ -1135,9 +1152,13 @@ def script_description():
                  "<font color=#ff0000>This script requires the <a href='https://pypi.org/project/pyparsing/'>PyParsing</a> module to properly function, but it wasn't found and failed to install.</font><br>"
                  "<font color=#ff0000>Check <a href='https://github.com/Penwy/adv-ff/tree/main/pyparsing-troubleshoot'>this page</a> for possible solutions.</font><br>"
                  )
-        return desc
+    if not obs_version_check:
+        desc += ("<br>"
+                 "<br>"
+                 f"<font color=#ff0000>This version of adv-ff requires OBS ≥ {obs_required_version['major']}.{obs_required_version['minor']}.{obs_required_version['patch']}  </font><br>"
+                 "<font color=#ff0000>Please update OBS for the script to work</font><br>"
+                 )
     return desc
-
 
 
 ###################################################################################################
@@ -1146,7 +1167,7 @@ def script_description():
 
 
 def script_load(settings):
-    if not pp:
+    if not (pp and obs_version_check):
         return
     settings_holder.settings = settings
     data = json.loads(obs.obs_data_get_json_with_defaults(settings))
@@ -1184,7 +1205,7 @@ def script_unload():
 
 
 def script_update(settings):
-    if not pp:
+    if not (pp and obs_version_check):
         return
     data = json.loads(obs.obs_data_get_json_with_defaults(settings))
 
@@ -1204,7 +1225,7 @@ def script_update(settings):
 
 
 def script_save(settings):
-    if not pp:
+    if not (pp and obs_version_check):
         return
     counters_data = obs.obs_data_create_from_json(json.dumps(counters.data))
     obs.obs_data_set_obj(settings, "counters", counters_data)
