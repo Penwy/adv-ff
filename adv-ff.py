@@ -393,6 +393,9 @@ if pp:
     def counter_action(tokens):
         return(("counter", *tokens.as_list()))
 
+    def advss_action(tokens):
+        return(("advss", *tokens.as_list()))
+
 
     grammar     = pp.Forward()
 
@@ -416,7 +419,13 @@ if pp:
                     pp.Literal(f"{token_delimiter}").suppress()
                     )
 
-    str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
+    advss       =  (pp.Literal("a").suppress()                              +
+                    ~keyword + pp.Literal(f"{token_delimiter}").suppress()  +
+                    pp.Group(grammar)                                       +
+                    pp.Literal(f"{token_delimiter}").suppress()
+                    )
+
+    str_block   = pp.Combine(pp.OneOrMore(~keyword +~literal +~counter +~advss +~pp.Literal(f"{token_delimiter}") + pp.Regex(r'[\s\S]')))
 
     ex_block    = kw["ex_start"]   + pp.Group(grammar)          + kw["end"]
 
@@ -430,18 +439,21 @@ if pp:
     str_block.set_parse_action(string_action)
     literal.set_parse_action(literal_action)
     counter.set_parse_action(counter_action)
+    advss.set_parse_action(advss_action)
 
     grammar.leave_whitespace()
     if_block.leave_whitespace()
     ex_block.leave_whitespace()
     literal.leave_whitespace()
     counter.leave_whitespace()
+    advss.leave_whitespace()
     str_block.leave_whitespace()
 
     grammar <<= pp.ZeroOrMore( ex_block
                              | if_block
                              | literal
                              | counter
+                             | advss
                              | str_block
                              )
 
@@ -520,6 +532,27 @@ def counter_eval(counter_id, increase=True):
         counters.data[counter_id] = int(increase)
 
     return str(value)
+
+
+def advss_fetch(name):
+    """ Fetches and returns the value of the adv-ss variable with name `name`
+    """
+    proc_handler = obs.obs_get_proc_handler()
+    data = obs.calldata_create()
+    obs.calldata_set_string(data, "name", str(name))    # As far as I can see there is no python object that fails to convert to str so no need to guard this
+    obs.proc_handler_call(proc_handler, "advss_get_variable_value", data)
+
+    if obs.calldata_bool(data, "success"):
+        value = obs.calldata_string(data, "value")
+        obs.calldata_destroy(data)
+        return value, 200
+
+    if obs.calldata_string(data, "success") is None:    # Adv-ss plugin not loaded. (Note that I do not guarantee the validity and future-proofness of this method)
+        obs.calldata_destroy(data)
+        return "", 501
+
+    obs.calldata_destroy(data)
+    return "", 404
 
 
 def parser_fetch_data(sources):
@@ -641,6 +674,20 @@ def interpreter(tree, data, err_counter=ErrCounter(), increase_counters=True, sa
             case "counter":
                 interpreted = interpreter(node[1], data, err_counter, increase_counters)
                 return_string += counter_eval(interpreted, increase_counters)
+
+            case "advss":
+                interpreted = interpreter(node[1], data, err_counter, increase_counters)
+                val, code = advss_fetch(interpreted)
+                match code:
+                    case 200:
+                        return_string += val
+                    case 404:
+                        err_counter.counter +=1
+                        print(f"Adv-ss variable not found : {interpreted}")
+                    case 501:
+                        err_counter.counter +=1
+                        print(f"Adv-ss not loaded")
+
 
             case "value":
                 try:
