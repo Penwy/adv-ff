@@ -94,7 +94,7 @@ if not pyp_satisfied:
 
 
 ###################################################################################################
-###### OBS Version Check #######################################################################
+###### OBS Version Check ##########################################################################
 ###################################################################################################
 
 obs_version = obs.obs_get_version()
@@ -352,7 +352,7 @@ def obs_frontend_get_last_recording():
         return value.decode("utf-8")
     return ""
 
-def valid_formatted_length(file_format):    # This is an abomination I really hope the filename formatting crop will be fixed soonish
+def valid_formatted_length(file_format):    # This is an abomination I really hope the filename formatting crop will be fixed soonish -  Lol. Lmfao even. (Dec 2025)
     available_length = 255 - 10             # We assume no extension will ever be more than 10 bytes, if there exists one that does, fuck that noise
 
     formatted_p = _os_generate_formatted_filename("".encode("utf-8"), False, file_format.encode("utf-8"))
@@ -522,6 +522,8 @@ def if_eval(expr):
 
 
 def counter_eval(counter_id, increase=True):
+    """ Returns the current value of the specified counter, incrementing it if needed
+    """
     try:
         value = counters.data[counter_id]
         if increase:
@@ -840,7 +842,7 @@ def rec_parser_apply_cb(event):
                             obs.timer_add(split_file_auto_callback,
                                           obs.config_get_int(config, "AdvOut", "RecSplitFileTime") * 60000)
                         case "Size":
-                            obs.timer_add(split_file_auto_callback, 1000)
+                            obs.timer_add(split_file_auto_callback, 1000)   # Worth being user-configurable?
                             split_file.size = obs.config_get_int(config, "AdvOut", "RecSplitFileSize") * 1000000
 
 
@@ -1023,6 +1025,8 @@ def buf_tester(props, *args):
 
 
 def fill_counters_list(props):
+    """ Populates the UI list with the existing counters
+    """
     counter_list = obs.obs_properties_get(props, "counter_list")
     obs.obs_property_list_clear(counter_list)
     for counter_name in counters.data:
@@ -1030,6 +1034,9 @@ def fill_counters_list(props):
 
 
 def refresh_counters(props, prop):
+    """ Checks the formatting and creates any new counter that was specified in it,
+    and refreshes the value of the currently displayed counter.
+    """
     data = parser_fetch_data(rec_parser.sources)
     interpreter(rec_parser.tree, data, increase_counters=False)
     data = parser_fetch_data(buf_parser.sources)
@@ -1041,6 +1048,8 @@ def refresh_counters(props, prop):
 
 
 def remove_counter(props, prop):
+    """ Deletes the currently selected ccounter from the existing one
+    """
     if counters.selected and counters.selected != "counter":
         counters.data.pop(counters.selected)
     else:
@@ -1051,6 +1060,8 @@ def remove_counter(props, prop):
 
 
 def counter_selected_modified(props, prop, settings):
+    """ Updates the value displayed when another counter is selected
+    """
     selected_counter = obs.obs_data_get_string(settings, "counter_list")
     if selected_counter:
         counters.selected = selected_counter
@@ -1059,6 +1070,8 @@ def counter_selected_modified(props, prop, settings):
 
 
 def counter_value_modified(props, prop, settings):
+    """ Updates the value of a counter when it is modified through the UI
+    """
     if json.loads(obs.obs_data_get_json_with_defaults(settings)):
         counters.data[counters.selected] = obs.obs_data_get_int(settings, "counter_val")
 
