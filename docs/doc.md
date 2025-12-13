@@ -69,6 +69,13 @@ For example, `v$2[height]$` inserts the height of the *third* source in the list
 When no source is specified, it defaults to the first one in the list.\
 `v$executable$` and `v$title$` are just proxies for `v$0[executable]$` and `v$0[title]$`.
 
+### Advanced Scene Switcher
+
+Adv-ss tokens can insert the value of a given variable defined and set in the Advanced Scene Switcher plugin.\
+They are using the syntax : `a$<variable_name>$`.\
+Amongst others, this allows using data from the twitch API connection, or data set through websockets.\
+Examples can be found [here](https://github.com/Penwy/adv-ff/blob/main/docs/adv-ss_examples.md).
+
 ### Counters
 
 Counter tokens are numbers that get incremented by 1 every time they are used when saving a file.\
