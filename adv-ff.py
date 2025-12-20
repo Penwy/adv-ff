@@ -33,7 +33,7 @@ import obspython as obs
 
 version = {
     "major" : 1,
-    "minor" : 3,
+    "minor" : 4,
     "patch" : 0,
     "variant" : ""
 }
