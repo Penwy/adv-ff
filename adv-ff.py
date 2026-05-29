@@ -136,6 +136,10 @@ source_fetch_proc = {"game_capture" :                 {"get_hooked":[("string", 
                                                                      ("bool",     "hooked"),
                                                                      ],
                                                        },
+                     "vkcapture-source":              {"get_hooked":[("string",   "executable"),
+                                                                     ("bool",     "hooked"),
+                                                                     ],
+                                                       },
                      }
 
 calldata_fetchers = {"string":  obs.calldata_string,

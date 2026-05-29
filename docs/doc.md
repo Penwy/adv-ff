@@ -58,6 +58,9 @@ Additionally, the following keys are added for use alongside the source settings
     - `class`: class of the window currently hooked (empty string if the source is not hooked)
 - For Text sources (both Freetype2 and GDI+):
     - `file_text`: if the source is reading from file, the contents of the file in question, otherwise an empty string
+- For obs-vkcapture sources (require version 1.5.6 and up):
+    - `hooked`: whether the source is currently hooked to a window
+    - `executable`: executable of the window currently hooked (empty string if the source is not hooked)
 
 [^2]: Builtin, not win-capture-audio plugin.
 
