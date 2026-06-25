@@ -78,7 +78,7 @@ if not pyp_satisfied:
         py_executable = [f"python{sys.version_info[0]}.{sys.version_info[1]}"]    # No, sys.executable is not trustworthy in the slightest
 
     try:
-        if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] == "org.kde.Platform":
+        if platform.system() == "Linux" and platform.freedesktop_os_release()["ID"] in ("org.kde.Platform", "org.freedesktop.platform"):
             subprocess.check_call([*py_executable, '-m', 'ensurepip'])          # Flatpak is weirdge
 
         subprocess.check_call([*py_executable, '-m', 'pip', 'install',  *options, '--upgrade', 'pyparsing'])
