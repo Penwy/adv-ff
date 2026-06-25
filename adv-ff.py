@@ -50,7 +50,10 @@ if sys.version_info[0] < 3 or sys.version_info[1] < 9:
 
 print(f"adv-ff starting load of version {('.').join((str(n) for _, n in version.items()))} on python {sys.version}")
 
-
+flatpak_runtime="/app/plugins/adv-ff/lib/python%d.%d/site-packages"%sys.version_info[0:2]
+if os.path.exists(flatpak_runtime) and os.path.isdir(flatpak_runtime):
+    sys.path.append(flatpak_runtime)
+    print("Found python runtime for flatpak in %s"%flatpak_runtime)
 
 try:
     pyp_version = meta.version("pyparsing")
