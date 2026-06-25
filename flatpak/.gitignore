@@ -1,0 +1,5 @@
+*.flatpak
+.flatpak-builder/
+_build/
+python3-requirements.json
+repo/

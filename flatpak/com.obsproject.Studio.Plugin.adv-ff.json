@@ -1,0 +1,26 @@
+{
+  "id": "com.obsproject.Studio.Plugin.adv-ff",
+  "branch": "stable",
+  "runtime": "com.obsproject.Studio",
+  "runtime-version": "stable",
+  "sdk": "org.freedesktop.Sdk//25.08",
+  "build-extension": true,
+  "separate-locales": false,
+  "appstream-compose": false,
+  "modules": [
+    "python3-requirements.json",
+    {
+      "name": "adv-ff",
+      "buildsystem": "simple",
+      "build-commands": [
+        "install -Dm755 adv-ff.py ${FLATPAK_DEST}/app/bin/adv-ff.py"
+      ],
+      "sources": [
+        {
+          "type": "file",
+          "path": "../adv-ff.py"
+        }
+      ]
+    }
+  ]
+}
