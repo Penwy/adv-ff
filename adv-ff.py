@@ -45,6 +45,13 @@ obs_required_version = {
     "variant" : ""
 }
 
+obs_replay_buffer_required_version = {
+    "major" : 33,
+    "minor" : 0,
+    "patch" : 0,
+    "variant" : ""
+}
+
 if sys.version_info[0] < 3 or sys.version_info[1] < 9:
     print("Python version < 3.9, correct behaviour is not guaranteed")
 
@@ -102,6 +109,11 @@ minimum_required = ((obs_required_version['major']<<24) |
                     (obs_required_version['minor']<<16) |
                     (obs_required_version['patch']<<0))
 obs_version_check = obs_version >= minimum_required
+
+replay_buffer_version_required = ((obs_replay_buffer_required_version['major']<<24) |
+                                  (obs_replay_buffer_required_version['minor']<<16) |
+                                  (obs_replay_buffer_required_version['patch']<<0))
+obs_replay_buffer_version_check = obs_version >= replay_buffer_version_required
 
 ###################################################################################################
 ###### Script customisation #######################################################################
@@ -1095,10 +1107,6 @@ flags.buffer_available = hasattr(obs, "OBS_FRONTEND_EVENT_REPLAY_BUFFER_SAVING")
 def process_props_flags(props, *args):
     """ Hides or show recording/replay buffer UI depending on whether their formatting is enabled
     """
-    if not flags.buffer_available:
-        obs.obs_property_set_visible(obs.obs_properties_get(props, "buf_enable"),   False)
-        # Hides the option to enable replay buffer formatting if PR#8955 isn't present
-
     if flags.record_enabled:
         obs.obs_property_set_visible(obs.obs_properties_get(props, "rec_format"),   True)
         obs.obs_property_set_visible(obs.obs_properties_get(props, "rec_source"),   True)
@@ -1124,6 +1132,17 @@ def process_props_flags(props, *args):
         obs.obs_property_set_visible(obs.obs_properties_get(props, "buf_tester"),   False)
         obs.obs_property_set_visible(obs.obs_properties_get(props, "buf_result"),   False)
         obs.obs_property_set_visible(obs.obs_properties_get(props, "buf_warning"),  False)
+
+    if not flags.buffer_available:
+        obs.obs_property_set_visible(obs.obs_properties_get(props, "buf_enable"),   False)
+        # Hides the option to enable replay buffer formatting if PR#8955 isn't present
+
+        if not obs_replay_buffer_version_check:
+            obs.obs_property_set_visible(           obs.obs_properties_get(props, "buf_warning"),  True)
+            obs.obs_property_set_long_description(  obs.obs_properties_get(props, "buf_warning"), "Replay buffer functionalities unavailable, update to obs 33.0.0 or newer to enable it.")
+            obs.obs_property_set_description(       obs.obs_properties_get(props, "buf_warning"), "Warning: ")
+            obs.obs_property_text_set_info_type(    obs.obs_properties_get(props, "buf_warning"), obs.OBS_TEXT_INFO_WARNING)
+            # Inform of the functionality's availability in obs 33+
 
     return True
 

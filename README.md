@@ -7,7 +7,8 @@ A dynamic extension of OBS Studio's filename formatting.
 
 - Read [the doc](https://github.com/Penwy/adv-ff/blob/main/docs/doc.md)
 - No, seriously, read it.
-- Replay buffer functionalities are not available on vanilla OBS, until PR #8955 gets merged (A custom build with those functionalities can be found on the releases page).
+- Replay buffer functionalities are not available on OBS versions older than 33.0.0.
+  - For earlier versions of obs, custom builds with that functionality enabled can be found in the [Releases page](https://github.com/Penwy/adv-ff/releases).
 - Ensure your OBS install uses python >= 3.10.
 - Download adv-ff.py and add it to OBS.
 
